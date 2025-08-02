@@ -5,7 +5,7 @@ import requests
 
 # Page configuration
 st.set_page_config(
-    page_title="🎬 Movie Recommender",
+    page_title="Movie Recommender",
     page_icon="🎬",
     layout="wide",
     initial_sidebar_state="collapsed"
