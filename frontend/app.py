@@ -2,6 +2,8 @@ import streamlit as st
 import pickle
 import pandas as pd
 import requests
+from huggingface_hub import hf_hub_download
+import os
 
 # Page configuration
 st.set_page_config(
@@ -172,11 +174,22 @@ st.markdown("""
 @st.cache_data
 def load_data():
     try:
-        movies = pickle.load(open('../model/movie_list.pkl', 'rb'))
-        similarity = pickle.load(open('../model/similarity.pkl', 'rb'))
+        repo_id = "AbdelilahElgallati/Movie-Recommender-System"  
+        movie_file = "movie_list.pkl"
+        similarity_file = "similarity.pkl"
+        
+        # Download files from Hugging Face
+        movie_path = hf_hub_download(repo_id=repo_id, filename=movie_file, repo_type="dataset")
+        similarity_path = hf_hub_download(repo_id=repo_id, filename=similarity_file, repo_type="dataset")
+        
+        # Load the pickle files
+        with open(movie_path, 'rb') as f:
+            movies = pickle.load(f)
+        with open(similarity_path, 'rb') as f:
+            similarity = pickle.load(f)
         return movies, similarity
-    except FileNotFoundError:
-        st.error("Model files not found. Please ensure movie_list.pkl and similarity.pkl are in the correct directory.")
+    except Exception as e:
+        st.error(f"Error loading models from Hugging Face: {e}")
         st.stop()
 
 movies, similarity = load_data()
