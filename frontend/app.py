@@ -169,7 +169,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Load the movie list and similarity matrix
 @st.cache_data
 def load_data():
     try:
