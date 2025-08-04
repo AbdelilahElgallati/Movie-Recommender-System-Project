@@ -2,8 +2,15 @@ import streamlit as st
 import pickle
 import pandas as pd
 import requests
-from huggingface_hub import hf_hub_download
+from huggingface_hub import hf_hub_download, HfApi, HfFolder, login
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Login with your Hugging Face token
+login(token=os.getenv("HF_TOKEN"))
 
 # Page configuration
 st.set_page_config(
@@ -171,6 +178,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+
 @st.cache_data
 def load_data():
     try:
@@ -179,8 +187,8 @@ def load_data():
         similarity_file = "similarity.pkl"
         
         # Download files from Hugging Face
-        movie_path = hf_hub_download(repo_id=repo_id, filename=movie_file, repo_type="dataset")
-        similarity_path = hf_hub_download(repo_id=repo_id, filename=similarity_file, repo_type="dataset")
+        movie_path = hf_hub_download(repo_id=repo_id, filename=movie_file)
+        similarity_path = hf_hub_download(repo_id=repo_id, filename=similarity_file)
         
         # Load the pickle files
         with open(movie_path, 'rb') as f:
