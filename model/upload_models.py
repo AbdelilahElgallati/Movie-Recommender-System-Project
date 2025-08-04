@@ -5,8 +5,10 @@ upload_file(
     path_in_repo="similarity.pkl",
     repo_id="AbdelilahElgallati/Movie-Recommender-System",
     repo_type="space",
+    
     token="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"  
 )
+
 
 
 # from huggingface_hub import create_repo
