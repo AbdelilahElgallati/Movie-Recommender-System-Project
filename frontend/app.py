@@ -2,14 +2,13 @@ import streamlit as st
 import pickle
 import pandas as pd
 import requests
-from huggingface_hub import hf_hub_download, HfApi, HfFolder, login
 import os
+from huggingface_hub import hf_hub_download, login
 from dotenv import load_dotenv
+import os
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Login with your Hugging Face token
 login(token=os.getenv("HF_TOKEN"))
 
 # Page configuration
@@ -19,6 +18,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
 
 st.markdown("""
 <style>
@@ -178,17 +178,26 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Define cache directory
+CACHE_DIR = "../model"
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 @st.cache_data
 def load_data():
     try:
-        repo_id = "AbdelilahElgallati/Movie-Recommender-System"  
+        repo_id = "AbdelilahElgallati/Movie-Recommender-System"
         movie_file = "movie_list.pkl"
         similarity_file = "similarity.pkl"
         
-        # Download files from Hugging Face
-        movie_path = hf_hub_download(repo_id=repo_id, filename=movie_file)
-        similarity_path = hf_hub_download(repo_id=repo_id, filename=similarity_file)
+        # Local cache paths
+        movie_path = os.path.join(CACHE_DIR, movie_file)
+        similarity_path = os.path.join(CACHE_DIR, similarity_file)
+        
+        # Download only if files don't exist locally
+        if not os.path.exists(movie_path):
+            movie_path = hf_hub_download(repo_id=repo_id, filename=movie_file, local_dir=CACHE_DIR)
+        if not os.path.exists(similarity_path):
+            similarity_path = hf_hub_download(repo_id=repo_id, filename=similarity_file, local_dir=CACHE_DIR)
         
         # Load the pickle files
         with open(movie_path, 'rb') as f:
@@ -204,30 +213,32 @@ movies, similarity = load_data()
 movies_list = movies['title'].values
 
 @st.cache_data
-def fetch_poster(movie_id):
+def fetch_poster_batch(movie_ids):
     try:
-        url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key=8265bd1679663a7ea12ac168da84d2e8&language=en-US"
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        poster_path = data.get('poster_path')
-        if poster_path:
-            return f"https://image.tmdb.org/t/p/w500/{poster_path}"
-        else:
-            return "https://via.placeholder.com/500x750/2a2a2a/ffffff?text=No+Poster+Available"
-    except Exception as e:
-        return "https://via.placeholder.com/500x750/2a2a2a/ffffff?text=Error+Loading+Poster"
+        api_key = "8265bd1679663a7ea12ac168da84d2e8"
+        posters = {}
+        for movie_id in movie_ids:
+            url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={api_key}&language=en-US"
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            poster_path = data.get('poster_path')
+            posters[movie_id] = f"https://image.tmdb.org/t/p/w500/{poster_path}" if poster_path else "https://via.placeholder.com/500x750/2a2a2a/ffffff?text=No+Poster+Available"
+        return posters
+    except Exception:
+        return {movie_id: "https://via.placeholder.com/500x750/2a2a2a/ffffff?text=Error+Loading+Poster" for movie_id in movie_ids}
 
 def recommend(movie):
     try:
         index = movies[movies['title'] == movie].index[0]
         distances = sorted(list(enumerate(similarity[index])), reverse=True, key=lambda x: x[1])
-        recommended_movie_names = []
-        recommended_movie_posters = []
-        for i in distances[1:6]:  
-            movie_id = movies.iloc[i[0]].movie_id
-            recommended_movie_posters.append(fetch_poster(movie_id))
-            recommended_movie_names.append(movies.iloc[i[0]].title)
+        recommended_movie_ids = [movies.iloc[i[0]].movie_id for i in distances[1:6]]
+        recommended_movie_names = [movies.iloc[i[0]].title for i in distances[1:6]]
+        
+        # Batch fetch posters
+        posters = fetch_poster_batch(recommended_movie_ids)
+        recommended_movie_posters = [posters[movie_id] for movie_id in recommended_movie_ids]
+        
         return recommended_movie_names, recommended_movie_posters
     except IndexError:
         st.error("Movie not found in the dataset.")
