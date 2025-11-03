@@ -1,4 +1,10 @@
-dataset/
+Dataset/
 *.pkl
 .venv
 .env 
+__pycache__/
+.ipynb_checkpoints
+.DS_Store
+.vscode/
+node_modules/
+*.log
