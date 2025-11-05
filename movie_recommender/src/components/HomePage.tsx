@@ -12,9 +12,11 @@ const API_URL = 'http://127.0.0.1:5001';
 interface HomePageProps {
   navigateTo: (pageName: string, movie?: any) => void;
   currentUser: CurrentUser;
+  userRatings: Record<string | number, number>; // <-- NOUVEAU
+  onRatingChange: (movieId: string | number, rating: number) => void; // <-- NOUVEAU
 }
 
-export const HomePage = ({ navigateTo, currentUser }: HomePageProps) => {
+export const HomePage = ({ navigateTo, currentUser, userRatings, onRatingChange }: HomePageProps) => {
   const [movies, setMovies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +24,8 @@ export const HomePage = ({ navigateTo, currentUser }: HomePageProps) => {
   const [selectedGenre, setSelectedGenre] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [userRatings, setUserRatings] = useState<Record<string | number, number>>({});
+  
+  // L'état local userRatings et handleRatingChange sont supprimés
   
   const fetchMovies = useCallback(async (search: string, genre: string, pageNum: number) => {
     setLoading(true);
@@ -64,36 +67,7 @@ export const HomePage = ({ navigateTo, currentUser }: HomePageProps) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleRatingChange = async (movieId: string | number, newRating: number) => {
-    if (!currentUser.id) { 
-      alert("Please login to rate movies.");
-      return;
-    }
-
-    setUserRatings(prevRatings => ({
-      ...prevRatings,
-      [movieId]: newRating
-    }));
-
-    try {
-      await fetch(`${API_URL}/api/rate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          movie_id: Number(movieId), 
-          rating: newRating,
-          user_id: parseInt(currentUser.id.toString(), 10) 
-        })
-      });
-    } catch (err) {
-      console.error("Failed to send rating to API:", err);
-      setUserRatings(prevRatings => {
-        const currentRatings = { ...prevRatings };
-        delete currentRatings[movieId];
-        return currentRatings;
-      });
-    }
-  };
+  // La fonction handleRatingChange est supprimée
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -118,8 +92,8 @@ export const HomePage = ({ navigateTo, currentUser }: HomePageProps) => {
           <MovieGrid 
             movies={movies} 
             onMovieClick={(movie) => navigateTo('movie', movie)}
-            userRatings={userRatings}
-            onRatingChange={handleRatingChange}
+            userRatings={userRatings} // <-- Prop globale
+            onRatingChange={onRatingChange} // <-- Prop globale
           />
           <Pagination currentPage={page} totalPages={totalPages} onPageChange={handlePageChange} />
         </>

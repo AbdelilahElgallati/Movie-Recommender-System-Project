@@ -1,5 +1,9 @@
-from flask import Blueprint, jsonify, request
-from ..utils.user_manager import load_users, save_users, get_next_available_user_id
+from flask import Blueprint, jsonify, request, current_app
+from ..utils.user_manager import (
+    load_users, save_users, get_next_available_user_id,
+    load_user_ratings 
+)
+from ..utils.data_helpers import enrich_recs_with_posters
 
 bp = Blueprint('auth', __name__)
 
@@ -59,3 +63,41 @@ def login_user():
                 return jsonify({"error": "Invalid username or password"}), 401
     
     return jsonify({"error": "Invalid username or password"}), 401
+
+@bp.route('/user/<int:user_id>/ratings', methods=['GET'])
+def get_user_ratings(user_id):
+    try:
+        ratings_data = load_user_ratings()
+        user_ratings_dict = ratings_data.get(str(user_id), {})
+
+        if not user_ratings_dict:
+            return jsonify([])
+
+        all_movies_df = current_app.all_movies_df
+        
+        rated_movies = []
+        for movie_id_str, rating in user_ratings_dict.items():
+            try:
+                movie_id = int(movie_id_str)
+                movie_row = all_movies_df[all_movies_df['movie_id'] == movie_id]
+                if not movie_row.empty:
+                    movie_data = movie_row.iloc[0]
+                    rated_movies.append({
+                        'movie_id': movie_id,
+                        'id': movie_id,  # Pour la compatibilité
+                        'title': movie_data['movie_title'],
+                        'rating': float(rating),
+                        'poster_url': movie_data.get('poster_url', ''),
+                        'genres': movie_data.get('genres_list', [])
+                    })
+            except (ValueError, TypeError) as e:
+                print(f"Error processing movie_id {movie_id_str}: {e}")
+                continue
+
+        return jsonify(rated_movies)
+        
+    except Exception as e:
+        print(f"Error in /api/user/ratings: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500

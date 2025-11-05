@@ -75,8 +75,7 @@ class ImprovedCollaborativeFiltering:
         # Pearson correlation
         numerator = np.sum((user1_common - mean1) * (user2_common - mean2))
         denominator = np.sqrt(
-            np.sum((user1_common - mean1) ** 2) * 
-            np.sum((user2_common - mean2) ** 2)
+            np.sum((user1_common - mean1) ** 2) * np.sum((user2_common - mean2) ** 2) # <-- CORRECTION DE LA FAUTE DE FRAPPE ICI
         )
         
         if denominator == 0:
@@ -145,19 +144,26 @@ class ImprovedCollaborativeFiltering:
         neighbors = self.find_k_neighbors(user_id, k)
         
         if not neighbors:
-            return self.user_means[user_id]
+            # --- CORRECTION 1 ---
+            # Utiliser .get() au lieu de [] pour éviter KeyError
+            return self.user_means.get(user_id, 3.0)
         
         # Calculate weighted average
         weighted_sum = 0.0
         similarity_sum = 0.0
-        user_mean = self.user_means[user_id]
+        
+        # --- CORRECTION 2 ---
+        # Utiliser .get() au lieu de [] pour éviter KeyError
+        user_mean = self.user_means.get(user_id, 3.0)
         
         for neighbor_id, similarity in neighbors:
             neighbor_idx = self.user_ids.index(neighbor_id)
             neighbor_rating = self.matrix_values[neighbor_idx, movie_idx]
             
             if neighbor_rating > 0:
-                neighbor_mean = self.user_means[neighbor_id]
+                # --- CORRECTION 3 ---
+                # Utiliser .get() au lieu de [] pour éviter KeyError
+                neighbor_mean = self.user_means.get(neighbor_id, 3.0)
                 weighted_sum += similarity * (neighbor_rating - neighbor_mean)
                 similarity_sum += abs(similarity)
         
@@ -226,39 +232,9 @@ class ImprovedCollaborativeFiltering:
         if num_ratings == 0:
             strength = 0.0
         else:
-            quantity_score = min(num_ratings / 50, 1.0)  # Normalize to 50 ratings
+            quantity_score = min(num_ratings / 50, 1.0)  
             variance = np.var(rated_items) if num_ratings > 1 else 0.0
             diversity_score = min(variance / 2.0, 1.0)  # Normalize variance
             strength = (quantity_score * 0.7) + (diversity_score * 0.3)
         
         return (num_ratings, avg_rating, strength)
-
-
-# # Example usage
-# if __name__ == "__main__":
-#     # Load data
-#     r_cols = ['user_id', 'movie_id', 'rating', 'unix_timestamp']
-#     ratings = pd.read_csv('Dataset/u.data', sep='\t', names=r_cols, encoding='latin-1')
-    
-#     # Create model
-#     cf_model = ImprovedCollaborativeFiltering(
-#         ratings, 
-#         min_common_items=3,
-#         similarity_threshold=0.1
-#     )
-    
-#     # Test user
-#     test_user = 196
-    
-#     # Check profile strength
-#     num_ratings, avg_rating, strength = cf_model.get_user_profile_strength(test_user)
-#     print(f"User {test_user} Profile:")
-#     print(f"  Number of ratings: {num_ratings}")
-#     print(f"  Average rating: {avg_rating:.2f}")
-#     print(f"  Profile strength: {strength:.2f}")
-    
-#     # Get recommendations
-#     print(f"\nTop 10 Recommendations for User {test_user}:")
-#     recommendations = cf_model.recommend(test_user, n=10, k=20)
-#     for movie_id, pred_rating in recommendations:
-#         print(f"  Movie {movie_id}: {pred_rating:.2f}")

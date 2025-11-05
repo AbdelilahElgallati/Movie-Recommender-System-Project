@@ -10,9 +10,11 @@ const PLACEHOLDER_IMG = 'https://placehold.co/500x750/1e293b/94a3b8?text=No+Imag
 interface MovieDetailPageProps {
   movie: any;
   navigateTo: (pageName: string, movie?: any) => void;
+  userRatings: Record<string | number, number>; // <-- NOUVEAU
+  onRatingChange: (movieId: string | number, rating: number) => void; // <-- NOUVEAU
 }
 
-export const MovieDetailPage = ({ movie, navigateTo }: MovieDetailPageProps) => {
+export const MovieDetailPage = ({ movie, navigateTo, userRatings, onRatingChange }: MovieDetailPageProps) => {
   const [details, setDetails] = useState<any>(null);
   const [similarMovies, setSimilarMovies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +34,6 @@ export const MovieDetailPage = ({ movie, navigateTo }: MovieDetailPageProps) => 
       setSimilarMovies([]);
 
       try {
-        // Get movie ID - could be either 'id' or 'movie_id'
         const movieId = movie.id || movie.movie_id;
         
         if (!movieId) {
@@ -44,7 +45,6 @@ export const MovieDetailPage = ({ movie, navigateTo }: MovieDetailPageProps) => 
         const detailData = await detailRes.json();
         setDetails(detailData);
 
-        // Charger les films similaires
         try {
           const similarRes = await fetch(
             `${API_URL}/api/similar/${encodeURIComponent(movie.title)}`
@@ -52,7 +52,6 @@ export const MovieDetailPage = ({ movie, navigateTo }: MovieDetailPageProps) => 
           if (similarRes.ok) {
             const similarData = await similarRes.json();
             
-            // Normalize similar movies data
             const normalizedSimilar = similarData.slice(0, 10).map(m => ({
               ...m,
               id: m.id || m.movie_id
@@ -85,7 +84,8 @@ export const MovieDetailPage = ({ movie, navigateTo }: MovieDetailPageProps) => 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm border border-gray-700/50">
-        <div className="flex flex-col lg:flex-row gap-8 p-8">
+        {/* ... (contenu de la page de détail, pas de changement ici) ... */}
+         <div className="flex flex-col lg:flex-row gap-8 p-8">
           <div className="lg:w-1/3 flex justify-center">
             <div className="relative group max-w-sm">
               <div className="absolute inset-0 bg-gradient-to-t from-indigo-600/20 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -208,8 +208,8 @@ export const MovieDetailPage = ({ movie, navigateTo }: MovieDetailPageProps) => 
           <MovieGrid
             movies={similarMovies}
             onMovieClick={(m) => navigateTo('movie', m)}
-            userRatings={{}}
-            onRatingChange={() => { }}
+            userRatings={userRatings} // <-- Passage des props
+            onRatingChange={onRatingChange} // <-- Passage des props
           />
         </div>
       )}

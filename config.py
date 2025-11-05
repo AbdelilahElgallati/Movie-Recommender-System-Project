@@ -9,6 +9,7 @@ class Config:
     USERS_PATH = os.path.join(BASE_DIR, 'Dataset/u.user')
     DATA_PATH_TMDB = os.path.join(BASE_DIR, 'Dataset/tmdb_5000_movies.csv')
     USERS_FILE_PATH = os.path.join(BASE_DIR, 'users.json')
+    USER_RATINGS_PATH = os.path.join(BASE_DIR, 'user_ratings.json')
     
     # Chemin pour le nouveau fichier de données enrichies
     ENRICHED_MOVIES_PATH = os.path.join(BASE_DIR, 'Dataset/movies_enriched.csv')

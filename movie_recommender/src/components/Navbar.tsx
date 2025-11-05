@@ -8,7 +8,7 @@ import {
   LogOut,
   UserPlus,
 } from 'lucide-react';
-import type { CurrentUser } from '../utils/types'; // <-- CHANGER L'IMPORT
+import type { CurrentUser } from '../utils/types'; 
 
 const API_URL = 'http://127.0.0.1:5001';
 
@@ -16,10 +16,10 @@ interface NavbarProps {
   navigateTo: (pageName: string) => void;
   currentPage: string;
   currentUser: CurrentUser;
-  setCurrentUser: (user: CurrentUser) => void;
+  setCurrentUser: (user: CurrentUser) => void; // Garde la même signature
 }
 
-export const Navbar = ({ navigateTo, currentPage, currentUser, setCurrentUser }) => {
+export const Navbar = ({ navigateTo, currentPage, currentUser, setCurrentUser }: NavbarProps) => {
   const [isLogin, setIsLogin] = useState(true);
   const [inputUsername, setInputUsername] = useState('');
   const [inputPassword, setInputPassword] = useState('');
@@ -79,6 +79,8 @@ export const Navbar = ({ navigateTo, currentPage, currentUser, setCurrentUser })
       
       if (!isLogin) {
         navigateTo('profile');
+      } else {
+        navigateTo('home');
       }
 
     } catch (err) {

@@ -6,14 +6,20 @@ import { TrendingUp, Film } from 'lucide-react';
 
 const API_URL = 'http://127.0.0.1:5001';
 
-// Liste des genres (copiée de GenreFilter.tsx)
 const GENRES = [
   'Action', 'Adventure', 'Animation', "Children's", 'Comedy', 'Crime', 
   'Documentary', 'Drama', 'Fantasy', 'Film-Noir', 'Horror', 'Musical', 
   'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western'
 ];
 
-export const DiscoverPage = ({ navigateTo }) => {
+// --- AJOUT DES PROPS ---
+interface DiscoverPageProps {
+  navigateTo: (pageName: string, movie?: any) => void;
+  userRatings: Record<string | number, number>;
+  onRatingChange: (movieId: string | number, rating: number) => void;
+}
+
+export const DiscoverPage = ({ navigateTo, userRatings, onRatingChange }: DiscoverPageProps) => {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -34,10 +40,9 @@ export const DiscoverPage = ({ navigateTo }) => {
       }
       const data = await res.json();
       
-      // Normalize movie data: ensure each movie has an 'id' field
       const normalizedData = data.map(movie => ({
         ...movie,
-        id: movie.id || movie.movie_id // Use id if exists, otherwise use movie_id
+        id: movie.id || movie.movie_id 
       }));
       
       setRecommendations(normalizedData);
@@ -91,8 +96,8 @@ export const DiscoverPage = ({ navigateTo }) => {
             <MovieGrid 
               movies={recommendations}
               onMovieClick={(movie) => navigateTo('movie', movie)}
-              userRatings={{}}
-              onRatingChange={() => {}}
+              userRatings={userRatings} // <-- Passage des props
+              onRatingChange={onRatingChange} // <-- Passage des props
             />
           </div>
         )}

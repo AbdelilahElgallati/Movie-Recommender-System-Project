@@ -107,10 +107,18 @@ class ImprovedContentBased:
         for idx in top_indices:
             if weighted_similarity[idx] < 0:
                 continue
-            movie_id = self.movies_df.iloc[idx]['movie_id']
-            title = self.idx_to_title[idx]
-            score = weighted_similarity[idx]
-            recommendations.append((movie_id, title, score))
+            try:
+                movie_id = self.movies_df.iloc[idx]['movie_id']
+                title = self.idx_to_title[idx]  # C'est ici que l'erreur se produit
+                score = weighted_similarity[idx]
+                recommendations.append((movie_id, title, score))
+            except KeyError as e:
+                print(f"Warning: Index {idx} not found in idx_to_title mapping. Skipping.")
+                continue
+            except IndexError as e:
+                print(f"Warning: Index {idx} out of bounds for movies_df. Skipping.")
+                continue
+        
         return recommendations
 
     def save_model(self, filepath='content_model.pkl'):
