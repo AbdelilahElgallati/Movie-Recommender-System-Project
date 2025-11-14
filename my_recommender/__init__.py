@@ -6,13 +6,21 @@ from flask import Flask
 from flask_cors import CORS
 from config import Config
 from .models.content import ImprovedContentBased 
-from .models.hybrid import HybridRecommender 
+from .models.hybrid import HybridRecommender
+from .database.connection import init_db 
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
     
-    CORS(app) 
+    CORS(app)
+    
+    # Initialize MongoDB
+    try:
+        init_db(app)
+    except Exception as e:
+        print(f"Warning: MongoDB initialization failed: {e}")
+        print("The app will continue but database features may not work.") 
 
     try:
         all_movies_df = pd.read_csv(Config.ENRICHED_MOVIES_PATH)

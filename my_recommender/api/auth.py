@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, current_app
-from ..utils.user_manager import (
-    load_users, save_users, get_next_available_user_id,
-    load_user_ratings 
+from ..utils.db_manager import (
+    find_user_by_username, create_user, verify_user_credentials,
+    get_user_ratings_with_movies
 )
 from ..utils.data_helpers import enrich_recs_with_posters
 
@@ -16,28 +16,23 @@ def signup_user():
     username = data['username']
     password = data['password']
     
-    users = load_users()
+    # Check if username already exists
+    existing_user = find_user_by_username(username)
+    if existing_user:
+        return jsonify({"error": "Username already exists"}), 409
     
-    for user in users:
-        if user['username'] == username:
-            return jsonify({"error": "Username already exists"}), 409
-            
-    new_user_id = int(get_next_available_user_id())
-    new_user = {
-        "id": new_user_id,
-        "username": username,
-        "password": password 
-    }
-    
-    users.append(new_user)
-    save_users(users)
-    
-    print(f"New user created: {username} (ID: {new_user_id})")
-    return jsonify({
-        "message": "User created successfully", 
-        "userId": new_user_id,
-        "username": username
-    }), 201
+    # Create new user
+    try:
+        new_user = create_user(username, password)
+        print(f"New user created: {username} (ID: {new_user['user_id']})")
+        return jsonify({
+            "message": "User created successfully", 
+            "userId": new_user['user_id'],
+            "username": new_user['username']
+        }), 201
+    except Exception as e:
+        print(f"Error creating user: {e}")
+        return jsonify({"error": "Failed to create user"}), 500
 
 @bp.route('/login', methods=['POST'])
 def login_user():
@@ -48,52 +43,40 @@ def login_user():
     username = data['username']
     password = data['password']
     
-    users = load_users()
-    
-    for user in users:
-        if user['username'] == username:
-            if user['password'] == password:
-                print(f"User logged in: {username} (ID: {user['id']})")
-                return jsonify({
-                    "message": "Login successful", 
-                    "userId": user['id'],
-                    "username": user['username']
-                })
-            else:
-                return jsonify({"error": "Invalid username or password"}), 401
+    # Verify credentials
+    user = verify_user_credentials(username, password)
+    if user:
+        print(f"User logged in: {username} (ID: {user['user_id']})")
+        return jsonify({
+            "message": "Login successful", 
+            "userId": user['user_id'],
+            "username": user['username']
+        })
     
     return jsonify({"error": "Invalid username or password"}), 401
 
 @bp.route('/user/<int:user_id>/ratings', methods=['GET'])
 def get_user_ratings(user_id):
     try:
-        ratings_data = load_user_ratings()
-        user_ratings_dict = ratings_data.get(str(user_id), {})
-
-        if not user_ratings_dict:
-            return jsonify([])
-
-        all_movies_df = current_app.all_movies_df
+        # Get ratings with movie details from MongoDB
+        ratings_with_movies = get_user_ratings_with_movies(user_id)
         
+        if not ratings_with_movies:
+            return jsonify([])
+        
+        # Format response
         rated_movies = []
-        for movie_id_str, rating in user_ratings_dict.items():
-            try:
-                movie_id = int(movie_id_str)
-                movie_row = all_movies_df[all_movies_df['movie_id'] == movie_id]
-                if not movie_row.empty:
-                    movie_data = movie_row.iloc[0]
-                    rated_movies.append({
-                        'movie_id': movie_id,
-                        'id': movie_id,  # Pour la compatibilité
-                        'title': movie_data['movie_title'],
-                        'rating': float(rating),
-                        'poster_url': movie_data.get('poster_url', ''),
-                        'genres': movie_data.get('genres_list', [])
-                    })
-            except (ValueError, TypeError) as e:
-                print(f"Error processing movie_id {movie_id_str}: {e}")
-                continue
-
+        for rating in ratings_with_movies:
+            movie = rating.get('movie', {})
+            rated_movies.append({
+                'movie_id': rating['movie_id'],
+                'id': rating['movie_id'],  # Pour la compatibilité
+                'title': movie.get('title', f"Movie {rating['movie_id']}"),
+                'rating': float(rating['rating']),
+                'poster_url': movie.get('poster_url', ''),
+                'genres': movie.get('genres', movie.get('genres_list', []))
+            })
+        
         return jsonify(rated_movies)
         
     except Exception as e:

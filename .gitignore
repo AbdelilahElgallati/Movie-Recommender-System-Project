@@ -1,10 +1,30 @@
-Dataset/
-*.pkl
-.venv
-.env 
+# Python
 __pycache__/
-.ipynb_checkpoints
-.DS_Store
+
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# IDE
 .vscode/
-node_modules/
+
+# Environment variables
+.env
+.env.local
+
+# Data files (too large for git)
+*.pkl
+Dataset/*.csv
+Dataset/*.data
+Dataset/*.item
+Dataset/*.user
+
+# Logs
 *.log
+logs/
+
+# Node
+node_modules/

@@ -4,7 +4,7 @@ import pandas as pd
 from config import Config 
 from ..models.hybrid import HybridRecommender 
 from ..utils.data_helpers import enrich_recs_with_posters
-from ..utils.user_manager import load_user_ratings, save_user_ratings
+from ..utils.db_manager import get_user_ratings, save_rating
 
 bp = Blueprint('recommendations', __name__)
 
@@ -19,24 +19,21 @@ def get_recommendations():
         hybrid_system = current_app.hybrid_system
         all_movies_df = current_app.all_movies_df
 
-        ratings_data = load_user_ratings()
-        user_ratings_dict = ratings_data.get(str(user_id), {})
+        # Get user ratings from MongoDB
+        user_ratings_list = get_user_ratings(user_id)
         
-        print(f"User {user_id} ratings from JSON: {user_ratings_dict}")
+        print(f"User {user_id} ratings from MongoDB: {len(user_ratings_list)} ratings")
         
-        user_ratings_list = []
-        for movie_id_str, rating in user_ratings_dict.items():
-            try:
-                movie_id_int = int(movie_id_str)
-                user_ratings_list.append({
-                    'user_id': user_id,
-                    'movie_id': movie_id_int, 
-                    'rating': float(rating)
-                })
-            except (ValueError, TypeError):
-                continue
+        # Convert to DataFrame format
+        ratings_data_list = []
+        for rating in user_ratings_list:
+            ratings_data_list.append({
+                'user_id': rating['user_id'],
+                'movie_id': rating['movie_id'],
+                'rating': float(rating['rating'])
+            })
         
-        user_ratings_df = pd.DataFrame(user_ratings_list) if user_ratings_list else pd.DataFrame()
+        user_ratings_df = pd.DataFrame(ratings_data_list) if ratings_data_list else pd.DataFrame()
         
         original_ratings_df = pd.DataFrame()
         if not current_app.ratings_df.empty:
@@ -140,26 +137,27 @@ def rate_movie():
         return jsonify({"error": "user_id, movie_id, and rating are required"}), 400
 
     try:
-        user_id = str(data['user_id'])
-        movie_id = str(data['movie_id'])
+        user_id = int(data['user_id'])
+        movie_id = int(data['movie_id'])
         rating = float(data['rating'])
 
-        # --- NOUVELLE LOGIQUE JSON ---
-        ratings_data = load_user_ratings()
-        
-        # setdefault crée la clé user_id si elle n'existe pas
-        ratings_data.setdefault(user_id, {})[movie_id] = rating
-        
-        save_user_ratings(ratings_data)
-        # --- FIN DE LA NOUVELLE LOGIQUE ---
+        # Save rating to MongoDB
+        saved_rating = save_rating(user_id, movie_id, rating)
         
         return jsonify({
             "success": True, 
-            "message": f"Rating {rating} for movie {movie_id} by user {user_id} saved."
+            "message": f"Rating {rating} for movie {movie_id} by user {user_id} saved.",
+            "rating": {
+                "user_id": saved_rating['user_id'],
+                "movie_id": saved_rating['movie_id'],
+                "rating": saved_rating['rating']
+            }
         }), 201
 
     except Exception as e:
         print(f"Error in /api/rate: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
     
 
@@ -168,8 +166,8 @@ def rate_movie():
 def debug_user_data(user_id):
     """Endpoint de débogage pour vérifier les données utilisateur"""
     try:
-        ratings_data = load_user_ratings()
-        user_ratings = ratings_data.get(str(user_id), {})
+        from ..utils.db_manager import get_user_ratings
+        user_ratings = get_user_ratings(user_id)
         
         return jsonify({
             'user_id': user_id,

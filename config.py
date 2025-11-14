@@ -32,3 +32,23 @@ class Config:
         'Documentary', 'Drama', 'Fantasy', 'Film-Noir', 'Horror', 'Musical', 
         'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western'
     ]
+    
+    # Configuration MongoDB
+    MONGODB_HOST = os.getenv('MONGODB_HOST', 'localhost')
+    MONGODB_PORT = int(os.getenv('MONGODB_PORT', 27017))
+    MONGODB_DB = os.getenv('MONGODB_DB', 'movie_recommender')
+    
+    # Build MongoDB URI - use environment variable if set, otherwise construct from host/port
+    _mongodb_uri_env = os.getenv('MONGODB_URI')
+    if _mongodb_uri_env:
+        MONGODB_URI = _mongodb_uri_env
+    else:
+        # Simple URI without authentication
+        MONGODB_URI = f'mongodb://{MONGODB_HOST}:{MONGODB_PORT}/'
+    
+    # Collections MongoDB
+    MONGODB_COLLECTIONS = {
+        'users': 'users',
+        'movies': 'movies',
+        'ratings': 'ratings'
+    }
